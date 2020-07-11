@@ -11,6 +11,7 @@ from transformers import BertModel
 from google_drive_downloader import GoogleDriveDownloader as gdd
 import uvicorn
 from fastapi import FastAPI
+from fastapi import HTTPException
 from pydantic import BaseModel
 
 
@@ -206,17 +207,41 @@ app = FastAPI(title='Система определения предлагаем�
 async def predict(data: InputData):
     """Получаем предикты зарплат
     """
-    result = evaluate_predict(
-        data.names,
-        data.experience,
-        data.schedule,
-        data.employment,
-        data.city,
-        rounded=True)
+    global tabnet, salary_orig
+    global experience2id, schedule2id, employment2id, city2id
 
-    if result == False:
-        return {'error': 'some error with data'}
-    return {'result': result}
+    names = data.names
+    experience = data.experience
+    schedule = data.schedule
+    employment = data.employment
+    city = data.city
+    names = data.names
+
+    if len(names) == len(experience) == len(schedule) == len(employment) == len(city) and len(names) > 0:
+        for item in experience:
+            if item not in experience2id.keys():
+                raise HTTPException(status_code=422, detail='experience not in list')
+        for item in schedule:
+            if item not in schedule2id.keys():
+                raise HTTPException(status_code=422, detail='schedule not in list')
+        for item in employment:
+            if item not in employment2id.keys():
+                raise HTTPException(status_code=422, detail='employment not in list')
+        for item in city:
+            if item not in city2id.keys():
+                raise HTTPException(status_code=422, detail='city not in list')
+
+        names = prepare_names(names)
+        experience, schedule, employment, city = prepare_meta(experience, schedule, employment, city)
+
+        X = np.concatenate((names, experience, schedule, employment, city), axis=1)
+        y = tabnet.predict(X)
+        salary = get_salary(orig=salary_orig, scaled=y)
+        if rounded == True:
+            salary = round_salary_array(salary)
+        return {'result': salary}
+    else:
+        raise HTTPException(status_code=422, detail='bad request')
 
 
 if __name__ == '__main__':
