@@ -16,7 +16,7 @@ from pydantic import BaseModel
 
 device = torch.device('cpu')
 base_path = os.path.abspath(os.path.dirname(__file__))
-system_path = os.path.join(base_path, 'files')
+system_path = os.path.join(base_path, 'system_files')
 
 def load_config_data(system_path: str) -> Tuple:
     """Загружаем словари, использовавшиеся при обучениии модели:
