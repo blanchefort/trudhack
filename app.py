@@ -239,7 +239,8 @@ async def predict(data: InputData):
         salary = get_salary(orig=salary_orig, scaled=y)
         # if rounded == True:
         #     salary = round_salary_array(salary)
-        return {'result': round_salary_array(salary)}
+        salary = round_salary_array(salary)
+        return {'result': salary.tolist()}
     else:
         raise HTTPException(status_code=422, detail='bad request')
 
