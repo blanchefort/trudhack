@@ -207,7 +207,7 @@ app = FastAPI(title='Система определения предлагаем�
 async def predict(data: InputData):
     """Получаем предикты зарплат
     """
-    global tabnet, salary_orig
+    global tabnet, salary_orig, round_salary_array
     global experience2id, schedule2id, employment2id, city2id
 
     names = data.names
@@ -237,9 +237,9 @@ async def predict(data: InputData):
         X = np.concatenate((names, experience, schedule, employment, city), axis=1)
         y = tabnet.predict(X)
         salary = get_salary(orig=salary_orig, scaled=y)
-        if rounded == True:
-            salary = round_salary_array(salary)
-        return {'result': salary}
+        # if rounded == True:
+        #     salary = round_salary_array(salary)
+        return {'result': round_salary_array(salary)}
     else:
         raise HTTPException(status_code=422, detail='bad request')
 
