@@ -25,8 +25,7 @@ six==1.15.0
 starlette==0.13.4
 threadpoolctl==2.1.0
 tokenizers==0.8.1rc1
-torch==1.5.1+cpu
-torchvision==0.6.1+cpu
+torch==1.5.1
 tqdm==4.47.0
 transformers==3.0.2
 urllib3==1.25.9

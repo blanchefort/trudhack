@@ -28,24 +28,24 @@ def load_config_data(system_path: str) -> Tuple:
     - salary_SF_mydata_600k - массив зарплат, для перевода нормализованного значения в реальное
     """
     if not os.path.isfile(os.path.join(system_path, 'salary_experience2id.pickle')):
-        gdd.download_file_from_google_drive(file_id='158xkRQ2Y8o3RZjDtupvwG458LxrTjZ5x',
+        gdd.download_file_from_google_drive(file_id='1s74KWFbTsFYnEjlp8qwP7YZAMRk0q4rO',
                                             dest_path=os.path.join(system_path, 'salary_experience2id.pickle'),
                                             unzip=False)
     if not os.path.isfile(os.path.join(system_path, 'salary_schedule2id.pickle')):
-        gdd.download_file_from_google_drive(file_id='1-8If6uch9w_wvhe1FLc0AvKqBKBkFZDc',
+        gdd.download_file_from_google_drive(file_id='1VX-SxXpZFL2_Zb-rSw5oMaavCjdZR_S5',
                                             dest_path=os.path.join(system_path, 'salary_schedule2id.pickle'),
                                             unzip=False)
     if not os.path.isfile(os.path.join(system_path, 'salary_employment2id.pickle')):
-        gdd.download_file_from_google_drive(file_id='1-Dqd2f1Pa-6fOrq1agPUewrP3XcikXJ6',
+        gdd.download_file_from_google_drive(file_id='1_xNh4Bky_Ty3043Q3A70_ky6bwXxiqso',
                                             dest_path=os.path.join(system_path, 'salary_employment2id.pickle'),
                                             unzip=False)
     if not os.path.isfile(os.path.join(system_path, 'salary_city2id.pickle')):
-        gdd.download_file_from_google_drive(file_id='1-98ual4XOChTBsyp-QVNcoBO2C3hgovd',
+        gdd.download_file_from_google_drive(file_id='1x1_OTuJKz2ShOAL8dIIlPDNyCc6y9yca',
                                             dest_path=os.path.join(system_path, 'salary_city2id.pickle'),
                                             unzip=False)
     if not os.path.isfile(os.path.join(system_path, 'salary_SF_mydata_600k.npy')):
-        gdd.download_file_from_google_drive(file_id='1-8XhepvRFOWYZXVUhF-vBBBDFs4tGU5X',
-                                            dest_path=os.path.join(system_path, 'salary_SF_mydata_600k.npy'),
+        gdd.download_file_from_google_drive(file_id='1-EgaIsd0XrlPuvdDBMvSvhTxJ1Wca-hz',
+                                            dest_path=os.path.join(system_path, 'salary_orig.npy'),
                                             unzip=False)
     
     with open(os.path.join(system_path, 'salary_experience2id.pickle'), 'rb') as handle:
@@ -60,7 +60,7 @@ def load_config_data(system_path: str) -> Tuple:
     with open(os.path.join(system_path, 'salary_city2id.pickle'), 'rb') as handle:
         city2id = pickle.load(handle)
 
-    salary_orig = np.load(os.path.join(system_path, 'salary_SF_mydata_600k.npy'))
+    salary_orig = np.load(os.path.join(system_path, 'salary_orig.npy'))
 
     return experience2id, schedule2id, employment2id, city2id, salary_orig
 
@@ -68,7 +68,7 @@ def load_tabnet(system_path: str) -> TabNetRegressor:
     """Загрузка и инициализация предобученной модели TabNet
     """
     if not os.path.isfile(os.path.join(system_path, 'SalaryTabnetL_GPU.pt')):
-        gdd.download_file_from_google_drive(file_id='1KXdys6uHlkjhsT5-ZfjAGeUbE30UTtJj',
+        gdd.download_file_from_google_drive(file_id='1_0KSX8Z6TezANpsmg0RZnErz7bdCK7f-',
                                             dest_path=os.path.join(system_path, 'SalaryTabnetL_GPU.pt'),
                                             unzip=False)
     tabnet = torch.load(os.path.join(system_path, 'SalaryTabnetL_GPU.pt'), map_location=torch.device('cpu'))
@@ -89,7 +89,13 @@ def get_scaled_salary(orig: Optional, salary: Optional) -> Optional:
 def round_salary(salary: float) -> float:
     """Округляет значение зарплаты до десятков тысяч
     """
-    return math.floor(salary / 1000) * 1000
+    if int(salary) > 5000:
+        sal = float(math.floor(int(salary) / 1000) * 1000)
+    else:
+        sal = float(salary)
+    if sal == 0:
+        sal = float(salary)
+    return sal
 
 # Метод округления, применяемый ко всему numpy-массиву
 round_salary_array = np.vectorize(round_salary)
@@ -185,7 +191,7 @@ def evaluate_predict(
 # load config data
 experience2id, schedule2id, employment2id, city2id, salary_orig = load_config_data(system_path)
 
-# load models
+load models
 tokenizer = BertTokenizer.from_pretrained('DeepPavlov/rubert-base-cased')
 bert = BertModel.from_pretrained('DeepPavlov/rubert-base-cased')
 tabnet = load_tabnet(system_path)
@@ -203,9 +209,23 @@ class InputData(BaseModel):
 
 app = FastAPI(title='Система определения предлагаемой заработной платы', version='0.1.0')
 
-@app.get('/predict', description='Получаем предикты зарплат')
+@app.get('/predict')
 async def predict(data: InputData):
     """Получаем предикты зарплат
+
+    ## Входящие параметры:
+
+    * `names`: List[str] - Название вакансии
+
+    * `experience`: List[str] - Опыт (код)
+
+    * `schedule`: List[str] - Тип графика (код)
+
+    * `employment`: List[str] - Тип занятости (код)
+
+    ## Результат
+    
+    * `List` - Возвращает список предполагаемых зарплат
     """
     global tabnet, salary_orig, round_salary_array
     global experience2id, schedule2id, employment2id, city2id
