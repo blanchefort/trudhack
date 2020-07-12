@@ -123,7 +123,7 @@ def prepare_names(names: List[str]) -> List:
         total_sum = total_sum / output[0].shape[1]
         names_vectors.extend(total_sum.detach().numpy())
 
-        return names_vectors
+    return names_vectors
 
 def prepare_meta(
     experience: List[str],
