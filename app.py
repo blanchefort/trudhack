@@ -191,7 +191,7 @@ def evaluate_predict(
 # load config data
 experience2id, schedule2id, employment2id, city2id, salary_orig = load_config_data(system_path)
 
-load models
+# load models
 tokenizer = BertTokenizer.from_pretrained('DeepPavlov/rubert-base-cased')
 bert = BertModel.from_pretrained('DeepPavlov/rubert-base-cased')
 tabnet = load_tabnet(system_path)
@@ -207,7 +207,7 @@ class InputData(BaseModel):
     employment: List[str] = []
     city: List[str] = []
 
-app = FastAPI(title='Система определения предлагаемой заработной платы', version='0.1.0')
+app = FastAPI(title='Система определения предлагаемой заработной платы', version='0.1.1')
 
 @app.get('/predict')
 async def predict(data: InputData):
